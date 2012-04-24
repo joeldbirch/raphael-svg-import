@@ -34,7 +34,6 @@ Nothing fancy but it gives you a starting point.
 - [jQuery](http://jquery.com/) (for XML parsing)
 
 ## To-do
-- <strike>SVG group to Raphael set conversion</strike>
 - remove jQuery dependancy
 - line recognition
 - text recognition
