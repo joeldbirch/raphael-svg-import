@@ -7,7 +7,6 @@ var imported = paper.importSVG(svgz);
 imported.getElement('circles').mouseover(function(){
 	var clr = '#' + ((Math.random()*0x996600) >> 0).toString(16); 
 	while(clr.length < 7) clr += '0';
-	console.log(clr);
 	this.attr({fill: clr});
 });
 
