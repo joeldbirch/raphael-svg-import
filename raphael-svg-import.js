@@ -4,81 +4,148 @@
  * Copyright (c) 2011 Wout Fierens
  * - Load order fix by Georgi Momchilov
  * - Prototype dependency removed by Matt Cook
+ * - Groups/getElement() added by Jonathan Greene
+ *
  * Licensed under the MIT (http://www.opensource.org/licenses/mit-license.php) license.
  */
+
+
+  /*\
+   * Paper.importSVG
+   [ method ]
+   **
+   * Renders valid SVG markup into elements/groups into a Raphael paper.
+   **
+   > Parameters
+   **
+   - rawSVG (string) string of SVG markup. eg) <svg>.*</svg> 
+   - [set] (set) a set in which to push all the rendered elements into
+   = (object) an object containing a 'getElement(id)'. Use this method to find any element/group in the imported items with the supplied id. The id will correlate to the id property of the node in the raw SVG string.
+  \*/
 Raphael.fn.importSVG = function (rawSVG, set) {
   try {
-    if (typeof rawSVG === 'undefined')
-      throw 'No data was provided.';
+    // valid SVG?
+    if (typeof rawSVG === 'undefined') throw 'No data was provided.';
+    if (!rawSVG.match(/<svg(.*?)>(.*)<\/svg>/i)) throw "The data you entered doesn't contain valid SVG.";
     
-    rawSVG = rawSVG.replace(/\n|\r|\t/gi, '');
+    // root node of SVG doc
+    var first = $.parseXML(rawSVG).firstChild;
     
-    if (!rawSVG.match(/<svg(.*?)>(.*)<\/svg>/i))
-      throw "The data you entered doesn't contain valid SVG.";
+    // reference to paper
+    var r = this;
     
+    // set to contain all items/sub-sets (eg group nodes)
+    var rootset = r.set();
+    rootset.import_id = 'root';
+
+    // RegExps for finding nodes/style/attributes
     var findAttr  = new RegExp('([a-z\-]+)="(.*?)"','gi'),
-        findStyle = new RegExp('([a-z\-]+) ?: ?([^ ;]+)[ ;]?','gi'),
-        findNodes = new RegExp('<(rect|polyline|circle|ellipse|path|polygon|image|text).*?\/>','gi');
+    findStyle = new RegExp('([a-z\-]+) ?: ?([^ ;]+)[ ;]?','gi'),
+    findNodes = new RegExp('<(rect|polyline|circle|ellipse|path|polygon|image|text).*?\/>','gi');
     
-    while(match = findNodes.exec(rawSVG)){      
-      var shape, style,
-          attr = { 'fill':'#000' },
-          node = RegExp.$1;
-      
-      while(findAttr.exec(match)){
-        switch(RegExp.$1) {
-          case 'stroke-dasharray':
-            attr[RegExp.$1] = '- ';
+    // recurse through the SVG doc and store path nodes as elements, and groups as sets
+    parseNode(first, rootset);
+
+    // internal function for recursing through SVG doc
+    function parseNode(node, rset){
+      $(node).children().each(function(){
+        if(this.childNodes.length){
+          var s = r.set(); 
+          s.import_id = this.id;
+          rset.push(parseNode(this, s)); 
+        } else {
+          rset.push(convertNode(this));
+        }
+      });
+      return rset;
+    }
+
+    // convert SVG DOM node to a string, and use the existing logic to render paths
+    function convertNode(node){
+      var nodestr = ((window.ActiveXObject) ? node.xml : new XMLSerializer().serializeToString(node)).replace(/\n|\r|\t/gi, '');
+
+      while(match = findNodes.exec(nodestr)){
+        var shape, style,
+        attr = { 'fill':'#000' },
+        node = RegExp.$1;
+
+        while(findAttr.exec(match)){
+          switch(RegExp.$1) {
+            case 'stroke-dasharray':
+              attr[RegExp.$1] = '- ';
+            break;
+            case 'style':
+              style = RegExp.$2;
+            break;
+            default:
+              attr[RegExp.$1] = RegExp.$2;
+            break;
+          }
+        };
+        
+        if (typeof attr['stroke-width'] === 'undefined')
+          attr['stroke-width'] = (typeof attr['stroke'] === 'undefined' ? 0 : 1);
+        
+        if (style) while(findStyle.exec(style)) attr[RegExp.$1] = RegExp.$2;
+        
+        switch(node) {
+          case 'rect':
+            shape = r.rect();
           break;
-          case 'style':
-            style = RegExp.$2;
+          case 'circle':
+            shape = r.circle();
           break;
-          default:
-            attr[RegExp.$1] = RegExp.$2;
+          case 'ellipse':
+            shape = r.ellipse();
+          break;
+          case 'path':
+            shape = r.path(attr['d']);
+          break;
+          case 'polygon':
+            shape = r.polygon(attr['points']);
+          break;
+          case 'image':
+            shape = r.image();
           break;
         }
-      };
+        
+        shape.attr(attr);
       
-      if (typeof attr['stroke-width'] === 'undefined')
-        attr['stroke-width'] = (typeof attr['stroke'] === 'undefined' ? 0 : 1);
-      
-      if (style)
-        while(findStyle.exec(style))
-          attr[RegExp.$1] = RegExp.$2;
-      
-      switch(node) {
-        case 'rect':
-          shape = this.rect();
-        break;
-        case 'circle':
-          shape = this.circle();
-        break;
-        case 'ellipse':
-          shape = this.ellipse();
-        break;
-        case 'path':
-          shape = this.path(attr['d']);
-        break;
-        case 'polygon':
-          shape = this.polygon(attr['points']);
-        break;
-        case 'image':
-          shape = this.image();
-        break;
-        //-F case 'text':
-        //-F   shape = this.text();
-        //-F break;
+      if(attr.id){
+        shape.import_id = attr.id
       }
-      
-      shape.attr(attr);
-      
-      if (typeof set !== 'undefined')
-        set.push(shape);
-    };
+
+        if (typeof set !== 'undefined') set.push(shape);
+      };
+
+      return shape;
+    }
+
+    function getElement(set, id){
+      var ret;
+      set.forEach(function(item){
+        if(item.import_id == id){
+          ret = item;
+          return false;
+        } else if(item.type == 'set'){
+          ret = getElement(item, id)
+          if(ret) return false;
+        } else {
+          return true;
+        }
+      });
+      return ret;
+    }
+
+    return {
+      getElement: function(id) { return getElement(rootset, id); }
+    }
+
   } catch (error) {
     alert('The SVG data you entered was invalid! (' + error + ')');
   }
 };
+
 
 // extending raphael with a polygon function
 Raphael.fn.polygon = function(pointString) {
