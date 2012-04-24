@@ -15,6 +15,14 @@ If you want the imported elements to be grouped in a set, pass the set as an opt
     var set = paper.set();
     paper.importSVG('<svg><rect x="50" y="50" fill="#FF00FF" width="100" height="100" /></svg>', set);
 
+You can also access elements and groups of imported items based on their SVG node ids:
+
+    var paper = Raphael(10, 10, 800, 500);
+    var imported = paper.importSVG('<svg><g id="rects"><rect id="rect1" x="50" y="50" fill="#FF00FF" width="100" height="100" /><rect id="rect2" x="150" y="150" fill="#00FFFF" width="100" height="100" /></g></svg>');
+    imported.getElement('rects').attr({'stroke-width': 10});
+    imported.getElement('rect1').attr({'fill-opacity': .6});
+
+
 You can export a svg file from Inkscape or Illustrator, open it with a plain text editor and dump it in there.<br/>
 The plugin will filter out the necessary.
 
@@ -23,9 +31,11 @@ Nothing fancy but it gives you a starting point.
 
 ## Dependencies
 - [Raphael JS](http://raphaeljs.com/)
+- [jQuery](http://jquery.com/) (for XML parsing)
 
 ## To-do
-- SVG group to Raphael set conversion
+- <strike>SVG group to Raphael set conversion</strike>
+- remove jQuery dependancy
 - line recognition
 - text recognition
 - image recognition
