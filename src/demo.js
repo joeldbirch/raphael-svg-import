@@ -16,3 +16,8 @@ imported.getElement('stars').mouseover(function(){
 });
 
 imported.getElement('Layer_3').attr({'stroke-width': 20, stroke: '#cc0000', 'stroke-opacity': .4});
+
+function importSVG(){
+	paper.clear();
+	paper.importSVG(prompt('Paste in raw SVG string'));
+}

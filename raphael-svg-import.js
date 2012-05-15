@@ -23,13 +23,26 @@
    = (object) an object containing a 'getElement(id)'. Use this method to find any element/group in the imported items with the supplied id. The id will correlate to the id property of the node in the raw SVG string.
   \*/
 Raphael.fn.importSVG = function (rawSVG, set) {
-  try {
+//  try {
     // valid SVG?
     if (typeof rawSVG === 'undefined') throw 'No data was provided.';
     if (!rawSVG.match(/<svg(.*?)>(.*)<\/svg>/i)) throw "The data you entered doesn't contain valid SVG.";
     
+    rawSVG = rawSVG.replace(/\n|\r|\t/gi, '');
+
+    console.log(rawSVG)
+    var xmldoc;
+
+    if(window.DOMParser){
+      var xmlp = new DOMParser();
+      xmldoc = xmlp.parseFromString(rawSVG, 'text/xml');
+    } else {
+      xmldoc = new ActiveXObject('Microsoft.XMLDOM');
+      xmldoc.async = false;
+      xmldoc.loadXML(rawSVG);
+    }
     // root node of SVG doc
-    var first = $.parseXML(rawSVG).firstChild;
+    var first = xmldoc.firstChild;//$.parseXML(rawSVG).firstChild;
     
     // reference to paper
     var r = this;
@@ -43,26 +56,41 @@ Raphael.fn.importSVG = function (rawSVG, set) {
     findStyle = new RegExp('([a-z\-]+) ?: ?([^ ;]+)[ ;]?','gi'),
     findNodes = new RegExp('<(rect|polyline|circle|ellipse|path|polygon|image|text).*?\/>','gi');
     
-    // recurse through the SVG doc and store path nodes as elements, and groups as sets
-    parseNode(first, rootset);
-
     // internal function for recursing through SVG doc
     function parseNode(node, rset){
-      $(node).children().each(function(){
-        if(this.childNodes.length){
-          var s = r.set(); 
-          s.import_id = this.id;
-          rset.push(parseNode(this, s)); 
-        } else {
-          rset.push(convertNode(this));
+
+        console.log('node: ' + node + ' :: ' + node.childNodes);
+        for(var i=0, l = node.childNodes.length; i<l; i++){
+          var child = node.childNodes[i];
+          if(child && child.childNodes && child.childNodes.length){
+            var s = r.set(); 
+            s.import_id = child.id;
+            rset.push(parseNode(child, s)); 
+          } else {
+            rset.push(convertNode(child));
+          }
         }
-      });
+
       return rset;
     }
 
     // convert SVG DOM node to a string, and use the existing logic to render paths
-    function convertNode(node){
-      var nodestr = ((window.ActiveXObject) ? node.xml : new XMLSerializer().serializeToString(node)).replace(/\n|\r|\t/gi, '');
+    function convertNode(node){      
+      var nodestr;
+      if(window.ActiveXObject) {
+  //      var tmp = document.createElement("div");
+  //      tmp.appendChild(node);
+  //      nodestr = node.xml//tmp.innerHTML;
+  //      console.log(node.text + ' :: ' + node.textContent);
+  //      for(var el in node) {
+  //        console.log(el + ' :: ' + node[el]);
+  //      }
+        
+      } else {
+        nodestr = new XMLSerializer().serializeToString(node);
+      }
+
+
 
       while(match = findNodes.exec(nodestr)){
         var shape, style,
@@ -137,13 +165,16 @@ Raphael.fn.importSVG = function (rawSVG, set) {
       return ret;
     }
 
+    // recurse through the SVG doc and store path nodes as elements, and groups as sets
+    parseNode(first, rootset);
+
     return {
       getElement: function(id) { return getElement(rootset, id); }
     }
 
-  } catch (error) {
-    alert('The SVG data you entered was invalid! (' + error + ')');
-  }
+//  } catch (error) {
+//    alert('The SVG data you entered was invalid! (' + error + ')');
+//  }
 };
 
 
