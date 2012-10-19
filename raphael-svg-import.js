@@ -25,10 +25,11 @@ Raphael.fn.importSVG = function (rawSVG, set) {
 	try {
 		// valid SVG?
 		if (typeof rawSVG === 'undefined') throw 'No data was provided.';
-		if (!rawSVG.match(/<svg(.*?)>(.*)<\/svg>/i)) throw "The data you entered doesn't contain valid SVG.";
 		
 		rawSVG = rawSVG.replace(/\n|\r|\t/gi, '');
-		
+
+		if (!rawSVG.match(/<svg(.*?)>(.*)<\/svg>/i)) throw "The data you entered doesn't contain valid SVG.";
+				
 		var xmldoc;
 		
 		if(window.DOMParser){
