@@ -52,7 +52,7 @@ Raphael.fn.importSVG = function (rawSVG, set) {
 		rootset.import_id = 'root';
 		
 		// RegExps for finding nodes/style/attributes
-		var findAttr  = new RegExp('([a-z\-]+)="(.*?)"','gi'),
+		var findAttr  = new RegExp('([a-z\-:]+)="(.*?)"','gi'),
 		findStyle = new RegExp('([a-z\-]+) ?: ?([^ ;]+)[ ;]?','gi'),
 		findNodes = new RegExp('<(rect|polyline|circle|ellipse|path|polygon|image|text).*?\/>','gi');
 		
@@ -116,7 +116,7 @@ Raphael.fn.importSVG = function (rawSVG, set) {
 						shape = r.polygon(attr['points']);
 					break;
 					case 'image':
-						shape = r.image();
+						shape = r.image(attr['xlink:href']);
 					break;
 				}
 				
